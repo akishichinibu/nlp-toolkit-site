@@ -1,6 +1,10 @@
 import React, { Component, FC, useState } from 'react';
 import { TokenRender } from './render';
-import TextareaAutosize from '@material-ui/core/TextareaAutosize';
+
+import TextField from '@material-ui/core/TextField';
+
+import { ServicePageBase } from '../ServicePageBase';
+import { Typography } from '@material-ui/core';
 
 
 interface RawTokenType {
@@ -14,27 +18,23 @@ interface ResponseType {
 }
 
 
-class TokenVisuable extends Component<{ paragraph_id: number, part: RawTokenType[] }> {
-
-  render() {
-    const temp = this.props.part.map(({ content, type }, t) => ({
-      key: (this.props.paragraph_id + 1) * (t + 1),
-      content: content,
-      type: type,
-    }));
-
-    return <>
-      <TokenRender tokenSeries={temp}></TokenRender>
-    </>;
-  };
+const TokenVisuable: FC<{ paragraph_id: number, part: RawTokenType[] }> = ({ part, paragraph_id: paragraphId }) => {
+  const data = part.map(({ content, type }, t) => ({
+    key: (paragraphId + 1) * (t + 1),
+    content: content,
+    type: type,
+  }));
+  return <>
+    <TokenRender tokenSeries={data} />
+  </>
 }
 
 
-export const BertQuery: FC = () => {
+export const ServiceBert: FC = () => {
   const [buffer, setBuffer] = useState<ResponseType | null>(null);
 
-  const getResult = (content: string) => {
-    const req = new Request("/api/predict", {
+  const getResult = async (content: string) => {
+    const req = new Request("/api/bert", {
       method: "POST",
       credentials: "same-origin",
       body: JSON.stringify({
@@ -42,16 +42,30 @@ export const BertQuery: FC = () => {
       }),
     });
 
-    fetch(req).then(async (res) => {
-      const data = await res.json();
-      setBuffer(data);
-    });
+    const res = await fetch(req);
+    const data = await res.json();
+    setBuffer(data);
   }
 
   return <>
-    <h5>文書を入力してください：</h5>
-    <TextareaAutosize id="bert-input" rowsMin={5} onChange={e => getResult(e.currentTarget.value)} />
-    <h5>解析結果：</h5>
-    {buffer === null ? <></> : buffer.result.map((r, i) => <div><TokenVisuable paragraph_id={i} part={r}/></div>)}
+    <ServicePageBase>
+      <div>
+        <Typography component="h4" variant="h4" align="left">文書を入力してください</Typography>
+
+        <TextField
+          id="bert-input"
+          helperText="Input please"
+          margin="normal"
+          fullWidth={true}
+          multiline={true}
+          rows={10}
+          onChange={e => getResult(e.currentTarget.value)} />
+
+        <Typography component="h4" variant="h4" align="left">解析結果</Typography>
+        <div>
+          {buffer === null ? <></> : buffer.result.map((r, i) => <TokenVisuable paragraph_id={i} part={r} />)}
+        </div>
+      </div>
+    </ServicePageBase>
   </>
 }
